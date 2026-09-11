@@ -1,5 +1,9 @@
+from pathlib import Path
+
 from pydantic import PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BASE_DIR = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
@@ -24,10 +28,12 @@ class Settings(BaseSettings):
     # Registration rule
     ALLOWED_EMAIL_DOMAIN: str
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=BASE_DIR / ".env", env_file_encoding="utf-8"
+    )
 
     MAX_FILE_SIZE_MB: int = 10
     UPLOAD_DIR: str = "uploads"
 
 
-settings = Settings()  # type: ignore
+settings = Settings() # type: ignore
