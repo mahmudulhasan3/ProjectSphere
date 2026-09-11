@@ -90,6 +90,14 @@ Before you start, make sure you have installed:
 
 ---
 
+## 🌐 Live API
+
+ProjectSphere backend is deployed on Render.
+
+- **Base URL:** https://projectsphere-39m1.onrender.com
+- **Swagger UI:** https://projectsphere-39m1.onrender.com/docs
+- **Health Check:** https://projectsphere-39m1.onrender.com/
+
 ## 🚀 Getting Started (Local Setup)
 
 ### 1. Clone the repository
