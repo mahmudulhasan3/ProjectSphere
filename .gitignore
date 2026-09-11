@@ -1,0 +1,22 @@
+# Virtual environment
+venv/
+
+# Environment variables (secrets)
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Uploaded files (dev এ local storage)
+uploads/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+admin.py
+supervisor.py
