@@ -95,7 +95,7 @@ Before you start, make sure you have installed:
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/<your-username>/ProjectSphere.git
+git clone https://github.com/<mahmudulhasan3>/ProjectSphere.git
 cd ProjectSphere
 ```
 
