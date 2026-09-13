@@ -13,28 +13,41 @@ coordination with a single structured platform for **Students**,
 
 ## ✨ Features
 
-- **Authentication** — Email/password login with JWT (access + refresh tokens),
-  email verification via 6-digit code, password reset via email link
+- **Authentication** — Email/password login with JWT access tokens, email
+  verification via a 6-digit code (hashed at rest, with rate-limit lockout after
+  repeated wrong attempts), password reset via email link, unverified accounts
+  auto-delete after 24 hours
 - **Student Workflow**
-  - Create or join a group via invite code (max 3 members)
-  - Select research area and preferred supervisors
-  - Submit thesis proposals (1–3 topic options with file upload)
-  - Track tasks assigned by supervisor with deadlines
-  - Submit final thesis manuscript
+  - Create or join a group via invite code (max 3 members, must match
+    department/level/term/section)
+  - Select research area and rank 3 preferred supervisors
+  - Submit thesis/project proposals (1–3 topic options with PDF upload)
+  - Track tasks assigned by supervisor, submit evidence, view progress %
+  - Chat with the assigned supervisor
+  - Submit final thesis/project manuscript
+  - Browse published Thesis Repository and Project Repository (separate)
 - **Supervisor Workflow**
-  - Accept/reject group preferences within capacity limits
-  - Review and approve/reject proposals with feedback
-  - Assign tasks with optional reference files
-  - Approve final thesis or request revisions
+  - View assigned groups
+  - Review and approve/reject proposals with feedback, or assign a topic
+    directly after repeated rejection
+  - Assign tasks with deadlines and optional reference files
+  - Review task submissions (verify / request changes)
+  - Chat with student groups
+  - Approve final thesis, request revision, or escalate to admin
 - **Admin Workflow**
-  - Manage semesters, supervisors, and research areas
-  - Finalize supervisor assignments, handle capacity overrides
-  - Publish/unpublish approved theses to the public Thesis Repository
-  - Monitor at-risk groups (low member count / missed deadlines)
-- **Notifications** — In-app + email alerts for deadlines, submissions,
-  approvals, and escalations
-- **Thesis Repository** — Browsable, searchable archive of approved and
-  published theses
+  - Create supervisor accounts (email invite to set their own password)
+  - Bulk-import students via CSV
+  - Manage semesters (deadlines, auto-delete period) — one active at a time
+  - Resolve supervisor assignment conflicts, grant capacity overrides
+  - Manage groups: lock/unlock, approve leaves, reallocate students, assign
+    leftover (ungrouped) students, extend deadlines
+  - Resolve escalated thesis cases, publish/unpublish approved work
+  - Deactivate/reactivate any student or supervisor account
+- **Notifications** — Email alerts for task deadlines (warning + overdue),
+  proposal decisions, new tasks, submissions, group at-risk status, and thesis
+  auto-delete warnings, sent via an hourly background job
+- **Thesis & Project Repository** — Two separate, browsable archives of
+  published work
 
 ---
 
@@ -49,7 +62,7 @@ coordination with a single structured platform for **Students**,
 | Migrations   | Alembic                              |
 | Auth         | PyJWT (JWT), pwdlib (Argon2 hashing) |
 | PDF Handling | pypdf                                |
-| Validation   | Pydantic                             |
+| Validation   | Pydantic / pydantic-settings         |
 
 ---
 
@@ -57,31 +70,34 @@ coordination with a single structured platform for **Students**,
 
 ```
 ProjectSphere/
-├── alembic/                # Database migration scripts
-│   ├── versions/
-│   └── env.py
-├── app/
-│   ├── main.py              # FastAPI entry point
-│   ├── config.py            # Environment/config settings
-│   ├── database.py          # DB session & engine setup
-│   ├── models/               # SQLAlchemy models
-│   ├── schemas/               # Pydantic request/response schemas
-│   ├── routers/                # API route handlers (auth, group, thesis, admin, etc.)
-│   ├── services/                # Business logic
-│   └── utils/                    # JWT, hashing, email helpers
-├── alembic.ini
-├── requirements.txt
-├── .env.example
-└── README.md
+└── backend/
+    ├── alembic/
+    │   ├── versions/
+    │   └── env.py
+    │
+    ├── app/
+    │   ├── main.py
+    │   ├── core/
+    │   ├── db/
+    │   ├── models/
+    │   ├── schemas/
+    │   ├── routers/
+    │   └── services/
+    │
+    ├── alembic.ini
+    ├── requirements.txt
+    ├── .env.example
+    └── README.md
 ```
 
-> ⚠️ Adjust this tree to match your actual folder layout before pushing.
+> ⚠️ Note the nesting: everything lives under `backend/`, and all internal
+> imports use the `backend.app...` path — see "Running the server" below,
+> commands must be run from the **repo root** (`ProjectSphere/`), not from
+> inside `backend/`.
 
 ---
 
 ## ⚙️ Prerequisites
-
-Before you start, make sure you have installed:
 
 - **Python 3.12+**
 - **PostgreSQL** (installed and running locally) →
@@ -98,31 +114,33 @@ ProjectSphere backend is deployed on Render.
 - **Swagger UI:** https://projectsphere-39m1.onrender.com/docs
 - **Health Check:** https://projectsphere-39m1.onrender.com/
 
+---
+
 ## 🚀 Getting Started (Local Setup)
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/<mahmudulhasan3>/ProjectSphere.git
+git clone https://github.com/mahmudulhasan3/ProjectSphere.git
 cd ProjectSphere
 ```
 
 ### 2. Create and activate a virtual environment
 
 ```bash
-python3 -m venv venv
+python3 -m venv backend/venv
 
 # Linux / macOS
-source venv/bin/activate
+source backend/venv/bin/activate
 
 # Windows
-venv\Scripts\activate
+backend\venv\Scripts\activate
 ```
 
 ### 3. Install dependencies
 
 ```bash
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 ```
 
 ### 4. Set up PostgreSQL database
@@ -137,94 +155,119 @@ GRANT ALL PRIVILEGES ON DATABASE projectsphere TO projectsphere_user;
 
 ### 5. Configure environment variables
 
-Copy the example env file and fill in your own values:
-
 ```bash
-cp .env.example .env
+cp backend/.env.example backend/.env
 ```
 
-`.env` should contain:
+Edit `backend/.env` — these are the **actual** variables the app reads
+(`app/core/config.py`):
 
 ```env
+# Database
 DATABASE_URL=postgresql://projectsphere_user:your_password@localhost:5432/projectsphere
-SECRET_KEY=your-super-secret-key
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-REFRESH_TOKEN_EXPIRE_DAYS=7
 
-# Email (SMTP) config for verification/notifications
+# JWT Authentication
+JWT_SECRET_KEY=your-secret-key-here
+JWT_ALGORITHM=HS256
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
+
+# Email Restriction
+ALLOWED_EMAIL_DOMAIN=niter.edu.bd
+
+# SMTP Configuration
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
+EMAIL_FROM=your-email@gmail.com
+
+# Frontend
+FRONTEND_URL=http://localhost:8000
 ```
+
+> Never commit a real `.env` file — only `.env.example` should be in git.
 
 ### 6. Run database migrations
 
+Run from the **repo root** (`ProjectSphere/`), pointing at the config inside
+`backend/`:
+
 ```bash
-alembic upgrade head
+python -m alembic -c backend/alembic.ini upgrade head
 ```
 
 ### 7. Start the development server
 
+Also run from the **repo root**:
+
 ```bash
-uvicorn app.main:app --reload
+uvicorn backend.app.main:app --reload
 ```
 
 The API will be live at:
 
-```
 http://127.0.0.1:8000
-```
 
-Interactive API docs (Swagger UI):
+Interactive API docs (Swagger UI, grouped by Student / Supervisor / Admin):
 
-```
 http://127.0.0.1:8000/docs
-```
 
 ---
 
 ## 🔑 Authentication Flow
 
-1. Register with a university email → verification email sent with 6-digit code
-2. Verify email → account activated, welcome email sent
-3. Login → receive **access token** (30 min) + **refresh token** (7 days,
-   HTTP-only cookie)
-4. Use `/auth/refresh` to silently get a new access token without re-login
+1. Register with a university email → a 6-digit verification code is emailed
+2. Verify email with the code (5 wrong attempts locks verification for 15
+   minutes) → account activated, welcome email sent
+3. Login → receive a JWT **access token**; send it as
+   `Authorization: Bearer <token>` on every subsequent request
+4. Token expires after `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` — log in again to get a
+   new one (there is currently no refresh-token flow)
 5. Forgot password → reset link sent via email
+6. Accounts that never verify within 24 hours are automatically deleted by the
+   hourly background job
 
 ---
 
 ## 🧪 Running Migrations (for future schema changes)
 
+Run all of these from the **repo root**:
+
 ```bash
 # Generate a new migration after model changes
-alembic revision --autogenerate -m "describe your change"
+python -m alembic -c backend/alembic.ini revision --autogenerate -m "describe your change"
 
 # Apply migrations
-alembic upgrade head
+python -m alembic -c backend/alembic.ini upgrade head
 
 # Roll back last migration
-alembic downgrade -1
+python -m alembic -c backend/alembic.ini downgrade -1
 ```
+
+> ⚠️ Always `cat` a freshly generated migration file before running
+> `upgrade head` — if a new model wasn't imported in `alembic/env.py`,
+> autogenerate silently produces an **empty** migration that does nothing.
 
 ---
 
-## 📌 Roadmap
+## 📌 Status
 
-- [x] Auth (JWT + email verification)
-- [x] Student portal (group, proposal, tasks)
-- [ ] Supervisor portal
-- [ ] Admin portal
-- [ ] AI-assisted duplicate proposal detection (rule-based)
-- [ ] Thesis Repository (public browsing)
+- [x] Auth (JWT + email verification, hashed codes, rate-limit lockout,
+      auto-delete unverified accounts)
+- [x] Student portal (group, proposal, tasks, chat, final submission)
+- [x] Supervisor portal (proposal review, task management, thesis review)
+- [x] Admin portal (supervisors, students, groups, semesters, publishing,
+      account management)
+- [x] Rule-based duplicate proposal-title detection (no ML)
+- [x] Thesis Repository + Project Repository (separate, public browsing)
+- [ ] Automated tests
+- [ ] Frontend (not started)
 
 ---
 
 ## 🤝 Contributing
 
-This is currently a solo academic project. Suggestions and issues are welcome
+This is currently a group academic project. Suggestions and issues are welcome
 via GitHub Issues.
 
 ---
