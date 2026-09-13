@@ -20,6 +20,7 @@ from backend.app.models.task import Task, Submission  # noqa
 from backend.app.models.thesis import Thesis  # noqa
 from backend.app.models.semester import Semester  # noqa
 from backend.app.models.student_profile import StudentProfile  # noqa
+from backend.app.models.message import Message  # noqa
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
