@@ -280,11 +280,25 @@ def admin_thesis_action(
 
 @router.get("/theses/repository", response_model=list[ThesisInfo])
 def thesis_repository(
-    category: str | None = None,  # optional filter: "thesis" or "project"
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    query = db.query(Thesis).filter(Thesis.is_published == True)  # noqa: E712
-    if category:
-        query = query.filter(Thesis.category == category)
-    return query.all()
+    """Public repository — THESIS submissions only."""
+    return (
+        db.query(Thesis)
+        .filter(Thesis.is_published == True, Thesis.category == "thesis")  # noqa: E712
+        .all()
+    )
+
+
+@router.get("/projects/repository", response_model=list[ThesisInfo])
+def project_repository(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Public repository — PROJECT submissions only."""
+    return (
+        db.query(Thesis)
+        .filter(Thesis.is_published == True, Thesis.category == "project")  # noqa: E712
+        .all()
+    )
