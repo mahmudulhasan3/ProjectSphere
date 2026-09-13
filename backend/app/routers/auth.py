@@ -32,11 +32,20 @@ from backend.app.core.email import (
     send_password_reset_email,
 )
 from backend.app.core.config import settings
+from backend.app.core.security import (
+    hash_password,
+    verify_password,
+    generate_verification_code,
+    create_access_token,
+    create_purpose_token,
+    verify_purpose_token,
+)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 VERIFICATION_CODE_EXPIRE_MINUTES = 10
-
+MAX_VERIFICATION_ATTEMPTS = 5
+VERIFICATION_LOCKOUT_MINUTES = 15
 
 from backend.app.models.student_profile import StudentProfile
 
@@ -74,7 +83,7 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
         password_hash=hash_password(user_data.password),
         role="student",
         is_verified=False,
-        verification_code=code,
+        verification_code=hash_password(code),
         verification_code_expires_at=expires_at,
     )
     db.add(new_user)
@@ -106,7 +115,26 @@ def verify_email(payload: VerifyEmailRequest, db: Session = Depends(get_db)):
     if user.is_verified:
         raise HTTPException(status_code=400, detail="Email already verified")
 
-    if not user.verification_code or user.verification_code != payload.code:
+    if user.verification_locked_until and datetime.now(
+        timezone.utc
+    ) < user.verification_locked_until.replace(tzinfo=timezone.utc):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many incorrect attempts. Please try again later or request a new code.",
+        )
+
+    if not user.verification_code or not verify_password(
+        payload.code, user.verification_code
+    ):
+        user.verification_attempts += 1
+        if user.verification_attempts >= MAX_VERIFICATION_ATTEMPTS:
+            user.verification_locked_until = datetime.now(timezone.utc) + timedelta(
+                minutes=VERIFICATION_LOCKOUT_MINUTES
+            )
+            user.verification_attempts = 0
+            user.verification_code = None
+            user.verification_code_expires_at = None
+        db.commit()
         raise HTTPException(status_code=400, detail="Invalid verification code")
 
     if user.verification_code_expires_at is None or datetime.now(
@@ -114,13 +142,13 @@ def verify_email(payload: VerifyEmailRequest, db: Session = Depends(get_db)):
     ) > user.verification_code_expires_at.replace(tzinfo=timezone.utc):
         raise HTTPException(status_code=400, detail="Verification code expired")
 
-    # Mark verified and clear the used code
     user.is_verified = True
     user.verification_code = None
     user.verification_code_expires_at = None
+    user.verification_attempts = 0
+    user.verification_locked_until = None
     db.commit()
 
-    # Send welcome email
     send_welcome_email(user.email, user.name)
 
     return MessageResponse(message="Email verified successfully. You can now log in.")
@@ -132,7 +160,6 @@ def resend_verification(
 ):
     user = db.query(User).filter(User.email == payload.email).first()
 
-    # Same generic message whether or not the account exists — avoids leaking which emails are registered
     generic_message = MessageResponse(
         message="If that email is registered and not yet verified, a new code has been sent."
     )
@@ -141,7 +168,7 @@ def resend_verification(
         return generic_message
 
     code = generate_verification_code()
-    user.verification_code = code
+    user.verification_code = hash_password(code)
     user.verification_code_expires_at = datetime.now(timezone.utc) + timedelta(
         minutes=VERIFICATION_CODE_EXPIRE_MINUTES
     )

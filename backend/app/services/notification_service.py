@@ -16,6 +16,7 @@ from backend.app.core.email import (
     send_group_at_risk_email,
     send_thesis_delete_warning_email,
 )
+from backend.app.models.student_profile import StudentProfile
 
 WARNING_WINDOW = timedelta(days=2)
 
@@ -132,16 +133,6 @@ def check_thesis_auto_delete(db: Session) -> None:
     db.commit()
 
 
-def run_all_checks() -> None:
-    """Entry point called periodically by the scheduler. Opens its own DB session."""
-    db = SessionLocal()
-    try:
-        check_task_deadlines(db)
-        check_thesis_auto_delete(db)
-    finally:
-        db.close()
-
-
 THESIS_DELETE_WARNING_DAYS = 3
 
 
@@ -149,3 +140,34 @@ def notify_admins_group_at_risk(db: Session, group: Group, reason: str) -> None:
     admins = db.query(User).filter(User.role == "admin").all()
     for admin in admins:
         send_group_at_risk_email(admin.email, group.name or f"Group {group.id}", reason)
+
+
+UNVERIFIED_ACCOUNT_TTL = timedelta(hours=24)
+
+
+def check_unverified_account_cleanup(db: Session) -> None:
+    """Deletes accounts that never verified their email within 24 hours of registering."""
+    cutoff = datetime.now(timezone.utc) - UNVERIFIED_ACCOUNT_TTL
+
+    stale_users = (
+        db.query(User)
+        .filter(User.is_verified == False, User.created_at < cutoff)  # noqa: E712
+        .all()
+    )
+
+    for user in stale_users:
+        db.query(StudentProfile).filter(StudentProfile.user_id == user.id).delete()
+        db.delete(user)
+
+    db.commit()
+
+
+def run_all_checks() -> None:
+    """Entry point called periodically by the scheduler. Opens its own DB session."""
+    db = SessionLocal()
+    try:
+        check_task_deadlines(db)
+        check_thesis_auto_delete(db)
+        check_unverified_account_cleanup(db)
+    finally:
+        db.close()
