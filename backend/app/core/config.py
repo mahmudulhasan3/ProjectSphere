@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     EMAIL_FROM: str
 
     # Used to build verification/reset links sent in emails
-    FRONTEND_URL: str = "http://localhost:8000"
+    FRONTEND_URL: str = "http://localhost:5173"
 
     # Registration rule
     ALLOWED_EMAIL_DOMAIN: str
