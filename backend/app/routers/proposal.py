@@ -159,14 +159,19 @@ def submit_proposal(
 
     proposal = Proposal(group_id=group.id, round_number=next_round, status="pending")
     db.add(proposal)
-    db.commit()
-    db.refresh(proposal)
+    db.flush()
 
-    for title, upload in zip(titles, files):
-        saved_path = save_upload_file(upload, subfolder=f"proposals/{group.id}")
-        db.add(ProposalTopic(proposal_id=proposal.id, title=title, file_url=saved_path))
+    try:
+        for title, upload in zip(titles, files):
+            saved_path = save_upload_file(upload, subfolder=f"proposals/{group.id}")
+            db.add(
+                ProposalTopic(proposal_id=proposal.id, title=title, file_url=saved_path)
+            )
+        db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
 
-    db.commit()
     db.refresh(proposal)
 
     return build_proposal_detail(db, proposal, duplicate_warning=duplicate_warning)
