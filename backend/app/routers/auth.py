@@ -32,6 +32,7 @@ from backend.app.core.email import (
     send_password_reset_email,
 )
 from backend.app.core.config import settings
+from fastapi.responses import HTMLResponse
 from backend.app.core.security import (
     hash_password,
     verify_password,
@@ -205,6 +206,63 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
     return MessageResponse(
         message="If that email is registered, a reset link has been sent."
     )
+
+
+RESET_PASSWORD_FORM = """
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reset Password — ProjectSphere</title>
+</head>
+<body style="font-family: Arial, sans-serif; max-width: 400px; margin: 60px auto; padding: 0 20px;">
+    <h2>Reset Your Password</h2>
+    <form id="resetForm">
+        <input type="hidden" id="token" value="{token}">
+        <label>New Password</label><br>
+        <input type="password" id="password" required minlength="8"
+               style="width:100%; padding:10px; margin:8px 0; box-sizing:border-box;">
+        <br>
+        <button type="submit" style="padding:10px 20px; margin-top:10px;">Reset Password</button>
+    </form>
+    <p id="message" style="margin-top:16px; font-weight:bold;"></p>
+    <script>
+        document.getElementById("resetForm").addEventListener("submit", async function(e) {{
+            e.preventDefault();
+            const token = document.getElementById("token").value;
+            const password = document.getElementById("password").value;
+            const msg = document.getElementById("message");
+            msg.style.color = "black";
+            msg.innerText = "Submitting...";
+            try {{
+                const res = await fetch("/auth/reset-password", {{
+                    method: "POST",
+                    headers: {{ "Content-Type": "application/json" }},
+                    body: JSON.stringify({{ token: token, new_password: password }})
+                }});
+                const data = await res.json();
+                if (res.ok) {{
+                    msg.style.color = "green";
+                    msg.innerText = "Password reset successful! You can now log in from the app.";
+                    document.getElementById("resetForm").style.display = "none";
+                }} else {{
+                    msg.style.color = "red";
+                    msg.innerText = data.detail || "Something went wrong.";
+                }}
+            }} catch (err) {{
+                msg.style.color = "red";
+                msg.innerText = "Network error — please try again.";
+            }}
+        }});
+    </script>
+</body>
+</html>
+"""
+
+
+@router.get("/reset-password", response_class=HTMLResponse)
+def reset_password_page(token: str):
+    return HTMLResponse(RESET_PASSWORD_FORM.format(token=token))
 
 
 @router.post("/reset-password", response_model=MessageResponse)
