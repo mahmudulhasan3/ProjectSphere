@@ -1,5 +1,5 @@
-import smtplib
-from email.mime.text import MIMEText
+import sib_api_v3_sdk
+from sib_api_v3_sdk.rest import ApiException
 
 from app.core.config import settings
 
@@ -12,15 +12,25 @@ FONT_FAMILY = "Arial, Helvetica, sans-serif"
 
 
 def send_email(to_email: str, subject: str, body: str) -> None:
-    msg = MIMEText(body, "html")
-    msg["Subject"] = subject
-    msg["From"] = settings.EMAIL_FROM
-    msg["To"] = to_email
+    configuration = sib_api_v3_sdk.Configuration()
+    configuration.api_key["api-key"] = settings.BREVO_API_KEY
 
-    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-        server.starttls()
-        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-        server.send_message(msg)
+    api_instance = sib_api_v3_sdk.TransactionalEmailsApi(
+        sib_api_v3_sdk.ApiClient(configuration)
+    )
+
+    send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+        to=[{"email": to_email}],
+        sender={"email": settings.EMAIL_FROM, "name": "ProjectSphere"},
+        subject=subject,
+        html_content=body,
+    )
+
+    try:
+        api_instance.send_transac_email(send_smtp_email)
+    except ApiException as e:
+        print(f"Brevo email send failed: {e}")
+        raise
 
 
 def _button(link: str, text: str) -> str:

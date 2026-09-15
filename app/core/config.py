@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     SMTP_USER: str
     SMTP_PASSWORD: str
     EMAIL_FROM: str
+    BREVO_API_KEY: str
 
     # Used to build verification/reset links sent in emails
     FRONTEND_URL: str = "http://localhost:5173"
@@ -36,4 +37,4 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "uploads"
 
 
-settings = Settings() # type: ignore
+settings = Settings()  # type: ignore
