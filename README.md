@@ -70,30 +70,28 @@ coordination with a single structured platform for **Students**,
 
 ```
 ProjectSphere/
-└── backend/
-    ├── alembic/
-    │   ├── versions/
-    │   └── env.py
-    │
-    ├── app/
-    │   ├── main.py
-    │   ├── core/
-    │   ├── db/
-    │   ├── models/
-    │   ├── schemas/
-    │   ├── routers/
-    │   └── services/
-    │
-    ├── alembic.ini
-    ├── requirements.txt
-    ├── .env.example
-    └── README.md
+├── alembic/
+│   ├── versions/
+│   └── env.py
+│
+├── app/
+│   ├── main.py
+│   ├── core/
+│   ├── db/
+│   ├── models/
+│   ├── schemas/
+│   ├── routers/
+│   └── services/
+│
+├── alembic.ini
+├── requirements.txt
+├── .env.example
+└── README.md
 ```
 
-> ⚠️ Note the nesting: everything lives under `backend/`, and all internal
-> imports use the `backend.app...` path — see "Running the server" below,
-> commands must be run from the **repo root** (`ProjectSphere/`), not from
-> inside `backend/`.
+> Everything lives at the repo root — all internal imports use the `app...`
+> path (not `backend.app...`). Run all commands below from the **repo root**
+> (`ProjectSphere/`).
 
 ---
 
@@ -128,19 +126,19 @@ cd ProjectSphere
 ### 2. Create and activate a virtual environment
 
 ```bash
-python3 -m venv backend/venv
+python3 -m venv venv
 
 # Linux / macOS
-source backend/venv/bin/activate
+source venv/bin/activate
 
 # Windows
-backend\venv\Scripts\activate
+venv\Scripts\activate
 ```
 
 ### 3. Install dependencies
 
 ```bash
-pip install -r backend/requirements.txt
+pip install -r requirements.txt
 ```
 
 ### 4. Set up PostgreSQL database
@@ -156,10 +154,10 @@ GRANT ALL PRIVILEGES ON DATABASE projectsphere TO projectsphere_user;
 ### 5. Configure environment variables
 
 ```bash
-cp backend/.env.example backend/.env
+cp .env.example .env
 ```
 
-Edit `backend/.env` — these are the **actual** variables the app reads
+Edit `.env` — these are the **actual** variables the app reads
 (`app/core/config.py`):
 
 ```env
@@ -189,19 +187,14 @@ FRONTEND_URL=http://localhost:8000
 
 ### 6. Run database migrations
 
-Run from the **repo root** (`ProjectSphere/`), pointing at the config inside
-`backend/`:
-
 ```bash
-python -m alembic -c backend/alembic.ini upgrade head
+python -m alembic upgrade head
 ```
 
 ### 7. Start the development server
 
-Also run from the **repo root**:
-
 ```bash
-uvicorn backend.app.main:app --reload
+uvicorn app.main:app --reload
 ```
 
 The API will be live at:
@@ -235,13 +228,13 @@ Run all of these from the **repo root**:
 
 ```bash
 # Generate a new migration after model changes
-python -m alembic -c backend/alembic.ini revision --autogenerate -m "describe your change"
+python -m alembic revision --autogenerate -m "describe your change"
 
 # Apply migrations
-python -m alembic -c backend/alembic.ini upgrade head
+python -m alembic upgrade head
 
 # Roll back last migration
-python -m alembic -c backend/alembic.ini downgrade -1
+python -m alembic downgrade -1
 ```
 
 > ⚠️ Always `cat` a freshly generated migration file before running
@@ -277,9 +270,7 @@ via GitHub Issues.
 This project is licensed under the MIT License — feel free to use and modify
 with attribution.
 
----
-
-## 👤 Author
+## 👤 Backend Author
 
 **Mahmudul Hasan** CSE Student, NITER | Aspiring AI Engineer GitHub:
 [@mahmudulhasan3](https://github.com/mahmudulhasan3) LinkedIn:
