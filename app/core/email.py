@@ -3,7 +3,6 @@ from sib_api_v3_sdk.rest import ApiException
 
 from app.core.config import settings
 
-# ---- Brand styling (single source of truth) ----
 BRAND_COLOR = "#4F46E5"
 TEXT_COLOR = "#1F2937"
 MUTED_COLOR = "#6B7280"
@@ -34,10 +33,6 @@ def send_email(to_email: str, subject: str, body: str) -> None:
 
 
 def _button(link: str, text: str) -> str:
-    """
-    Table-based button — <a> with padding renders inconsistently in Outlook,
-    but a table cell with a background color is reliable across all major clients.
-    """
     return f"""
     <table role="presentation" cellpadding="0" cellspacing="0" border="0">
       <tr>
@@ -55,12 +50,6 @@ def _button(link: str, text: str) -> str:
 
 
 def _wrap_email(inner_html: str, preheader: str) -> str:
-    """
-    Full HTML document with table-based layout.
-    - DOCTYPE + meta tags: required for consistent rendering across clients
-    - preheader: hidden text controlling the inbox preview snippet
-    - table layout: Outlook (Word engine) only reliably supports tables, not div/flex
-    """
     return f"""
     <!DOCTYPE html>
     <html lang="en">
@@ -177,34 +166,6 @@ def send_supervisor_invite_email(to_email: str, name: str, token: str) -> None:
     )
 
 
-def send_task_created_email(to_email: str, task_title: str, deadline: str) -> None:
-    inner = f"""
-    <p style="margin:0 0 12px 0;">A new task has been assigned to your group:</p>
-    <p style="font-size:18px; font-weight:600; color:{BRAND_COLOR}; margin:0 0 8px 0;">{task_title}</p>
-    <p style="margin:0; font-size:14px; color:{MUTED_COLOR};">Deadline: {deadline}</p>
-    """
-    send_email(
-        to_email,
-        f"New task assigned: {task_title}",
-        _wrap_email(inner, preheader=f"New task: {task_title}"),
-    )
-
-
-def send_evidence_submitted_email(
-    to_email: str, task_title: str, group_name: str
-) -> None:
-    inner = f"""
-    <p style="margin:0 0 12px 0;">Group <strong>{group_name}</strong> submitted evidence for:</p>
-    <p style="font-size:18px; font-weight:600; color:{BRAND_COLOR}; margin:0;">{task_title}</p>
-    <p style="margin-top:12px; font-size:14px; color:{MUTED_COLOR};">Please review it in ProjectSphere.</p>
-    """
-    send_email(
-        to_email,
-        f"Submission received: {task_title}",
-        _wrap_email(inner, preheader=f"{group_name} submitted evidence."),
-    )
-
-
 def send_group_at_risk_email(to_email: str, group_name: str, reason: str) -> None:
     inner = f"""
     <p style="margin:0 0 12px 0;">Group <strong>{group_name}</strong> is now flagged at-risk.</p>
@@ -235,6 +196,34 @@ def send_proposal_decision_email(
 
     for email in to_emails:
         send_email(email, subject, _wrap_email(inner, preheader=subject))
+
+
+def send_task_created_email(to_email: str, task_title: str, deadline: str) -> None:
+    inner = f"""
+    <p style="margin:0 0 12px 0;">A new task has been assigned to your group:</p>
+    <p style="font-size:18px; font-weight:600; color:{BRAND_COLOR}; margin:0 0 8px 0;">{task_title}</p>
+    <p style="margin:0; font-size:14px; color:{MUTED_COLOR};">Deadline: {deadline}</p>
+    """
+    send_email(
+        to_email,
+        f"New task assigned: {task_title}",
+        _wrap_email(inner, preheader=f"New task: {task_title}"),
+    )
+
+
+def send_evidence_submitted_email(
+    to_email: str, task_title: str, group_name: str
+) -> None:
+    inner = f"""
+    <p style="margin:0 0 12px 0;">Group <strong>{group_name}</strong> submitted evidence for:</p>
+    <p style="font-size:18px; font-weight:600; color:{BRAND_COLOR}; margin:0;">{task_title}</p>
+    <p style="margin-top:12px; font-size:14px; color:{MUTED_COLOR};">Please review it in ProjectSphere.</p>
+    """
+    send_email(
+        to_email,
+        f"Submission received: {task_title}",
+        _wrap_email(inner, preheader=f"{group_name} submitted evidence."),
+    )
 
 
 def send_thesis_delete_warning_email(
