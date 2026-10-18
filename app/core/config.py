@@ -24,7 +24,9 @@ class Settings(BaseSettings):
     BREVO_API_KEY: str
 
     # Used to build verification/reset links sent in emails
-    FRONTEND_URL: str = "http://localhost:5173"
+    FRONTEND_URL: str = (
+        "https://projectsphere-frontend-8mq4jsyfp-project-sphere.vercel.app"
+    )
 
     # Registration rule
     ALLOWED_EMAIL_DOMAIN: str
