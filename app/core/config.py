@@ -25,7 +25,7 @@ class Settings(BaseSettings):
 
     # Used to build verification/reset links sent in emails
     FRONTEND_URL: str = (
-        "https://projectsphere-frontend-8mq4jsyfp-project-sphere.vercel.app"
+        "https://projectsphere-frontend-n53w4rt4m-project-sphere.vercel.app"
     )
 
     # Registration rule
