@@ -35,10 +35,13 @@ app = FastAPI(title="ProjectSphere API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL],
+    allow_origins=[
+        "https://projectsphere-frontend.vercel.app",
+        "https://projectsphere-frontend-olkxdbe1h-project-sphere.vercel.app",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Accept"],
 )
 
 app.include_router(auth.router)
