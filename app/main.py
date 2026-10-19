@@ -1,13 +1,23 @@
 from contextlib import asynccontextmanager
 import asyncio
 
-from app.routers import admin, auth, group, message, proposal, semester, settings as settings_router, supervisor, task
+from app.routers import (
+    admin,
+    auth,
+    group,
+    message,
+    proposal,
+    semester,
+    settings as settings_router,
+    supervisor,
+    task,
+)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.scheduler import periodic_notification_check
-
+from app.core.cloudinary_config import configure_cloudinary
 from app.routers import (
     thesis,
 )
@@ -20,6 +30,7 @@ async def lifespan(app: FastAPI):
     scheduler_task.cancel()
 
 
+configure_cloudinary()
 app = FastAPI(title="ProjectSphere API", lifespan=lifespan)
 
 app.add_middleware(

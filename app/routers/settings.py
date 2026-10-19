@@ -5,7 +5,7 @@ from app.db.database import get_db
 from app.core.deps import get_current_user
 from app.models.user import User
 from app.core.security import hash_password, verify_password
-from app.services.file_service import save_upload_file
+from app.services.image_service import upload_profile_photo, delete_profile_photo
 from app.schemas.settings import (
     ChangePasswordRequest,
     UpdateProfileRequest,
@@ -42,8 +42,20 @@ def update_photo(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    photo_url = save_upload_file(photo, subfolder=f"profile_photos/{current_user.id}")
-    current_user.photo_url = photo_url
+    current_user.photo_url = upload_profile_photo(photo, current_user.id)
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.delete("/profile/photo", response_model=ProfileResponse)
+def remove_photo(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    delete_profile_photo(current_user.id)
+    current_user.photo_url = None
 
     db.commit()
     db.refresh(current_user)

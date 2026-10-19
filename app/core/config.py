@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = (
         "https://projectsphere-frontend-n53w4rt4m-project-sphere.vercel.app"
     )
+    # Cloudinary (profile photo storage)
+    CLOUDINARY_URL: str
 
     # Registration rule
     ALLOWED_EMAIL_DOMAIN: str
